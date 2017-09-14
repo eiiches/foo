@@ -278,7 +278,6 @@ main(int argc, char **argv)
 	std::cerr << std::endl;
 
 	pmc_info_t info = pmcinfo();
-	info.num_pmc_per_thread = 4;
 	std::cerr << "Version ID of architectural performance monitoring (CPUID.0AH:EAX[7:0]): " << info.version_id << std::endl;
 	std::cerr << "Number of general-purpose performance monitoring counter per logical processor (CPUID.0AH:EAX[15:8]): " << info.num_pmc_per_thread << std::endl;
 	std::cerr << "Bit width of general-purpose performance monitoring counter: " << info.pmc_bitwidth << std::endl;
