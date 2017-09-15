@@ -5,9 +5,9 @@
 #include <algorithm>
 #include <thread>
 #include <string>
-#include <regex>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <set>
 #include <vector>
 #include <stdexcept>
@@ -75,7 +75,7 @@ struct pmc_config_t {
 	u_int8_t counter_mask      :8;
 	u_int64_t __reserved       :32;
 } __attribute__((packed));
-static_assert(sizeof(pmc_config_t) == 8);
+static_assert(sizeof(pmc_config_t) == 8, "foo");
 
 struct msr_t {
 private:
@@ -93,6 +93,7 @@ public:
 			close(fd);
 		this->fd = rhs.fd;
 		rhs.fd = -1;
+		return *this;
 	}
 	msr_t(const std::string &path) {
 		fd = open(path.c_str(), O_RDWR);
@@ -163,7 +164,11 @@ std::vector<std::string> split(const std::string &s, char delim) {
 }
 
 std::string trim(const std::string &s) {
-	return std::regex_replace(s, std::regex("^[ \t]+|[ \t]+$"), "");
+	size_t start = 0;
+	for (; start < s.length() && (s[start] == ' ' || s[start] == '\t'); ++start);
+	int end = s.length() - 1;
+	for (; end >= 0 && (s[end] == ' ' || s[end] == '\t'); --end);
+	return s.substr(start, end - start + 1);
 }
 
 std::vector<cpu_t> cpuinfo() {
@@ -180,7 +185,7 @@ std::vector<cpu_t> cpuinfo() {
 			continue;
 		}
 
-		const int idx = line.find(":");
+		const auto idx = line.find(":");
 		if (idx == std::string::npos)
 			throw std::runtime_error("can't parse /proc/cpuinfo");
 
@@ -301,7 +306,7 @@ main(int argc, char **argv)
 
 	// configure
 	for (core_id_t core_id = 0; core_id < num_cores; ++core_id) {
-		for (int i = 0; i < length_of(UOPS_DISPATCHED_PORT); ++i) {
+		for (size_t i = 0; i < length_of(UOPS_DISPATCHED_PORT); ++i) {
 			const int cpu_idx = i / info.num_pmc_per_thread;
 			const int pmc_idx = i % info.num_pmc_per_thread;
 
@@ -323,7 +328,7 @@ main(int argc, char **argv)
 	// reset
 	std::vector<std::vector<u_int64_t>> values(num_cores);
 	for (core_id_t core_id = 0; core_id < num_cores; ++core_id) {
-		for (int i = 0; i < length_of(UOPS_DISPATCHED_PORT); ++i) {
+		for (size_t i = 0; i < length_of(UOPS_DISPATCHED_PORT); ++i) {
 			const int cpu_idx = i / info.num_pmc_per_thread;
 			const int pmc_idx = i % info.num_pmc_per_thread;
 
@@ -343,14 +348,14 @@ main(int argc, char **argv)
 
 		for (core_id_t core_id = 0; core_id < num_cores; ++core_id) {
 			fprintf(stderr, "[");
-			for (int i = 0; i < length_of(UOPS_DISPATCHED_PORT); ++i) {
+			for (size_t i = 0; i < length_of(UOPS_DISPATCHED_PORT); ++i) {
 				const int cpu_idx = i / info.num_pmc_per_thread;
 				const int pmc_idx = i % info.num_pmc_per_thread;
 
 				auto &msr = core_msrs[core_id][cpu_idx];
 				u_int64_t value = msr.rdmsr(IA32_PMC[pmc_idx]);
 				u_int64_t &value0 = values[core_id][i];
-				fprintf(stderr, "%6.2f%", (value - value0) / (double) hz * 100);
+				fprintf(stderr, "%6.2f%%", (value - value0) / (double) hz * 100);
 				value0 = value;
 			}
 			fprintf(stderr, "] ");
