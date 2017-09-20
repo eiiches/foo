@@ -294,8 +294,8 @@ main(int argc, char **argv)
 	}
 
 	const std::vector<cpu_t> cpus = cpuinfo();
-	if (cpus[0].flags.find("constant_tsc") == cpus[0].flags.end()) {
-		std::cerr << "Cannot calculate core utilization because constant_tsc is not available on your CPU." << std::endl;
+	if (cpus[0].flags.find("constant_tsc") == cpus[0].flags.end() || cpus[0].flags.find("nonstop_tsc") == cpus[0].flags.end()) {
+		std::cerr << "Cannot calculate core utilization because constant_tsc or nonstop_tsc is not available on your CPU." << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
